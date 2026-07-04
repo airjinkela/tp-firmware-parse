@@ -1,0 +1,91 @@
+tplink firmware partitions
+    
+---------------------------------HEADER-----------------------------------------
+0x00  |  00 00 01 00                                       | // Unknown
+0x00  |              55 AA 4C 5E  83 1F 53 4B A1 F8 F7 C9  | // tplink image magic header
+0x01  |  18 DF 8F BF 7D A1 AA 55                           | // tplink image magic header
+0x01  |                           02 00                    | // Header size
+0x01  |                                 00 00              | // vendorId
+0x01  |                                       00 00        | // Unknown
+0x01  |                                             00 0F  | // Unsure, contentType (CONTENT_TYPE_ALL=23) (BIT4 have facboot) 
+                                                                // (BIT0 have normal_boot) (BIT1 have rootfs)
+0x02  |  CD 04 87 C6 9D 4F CB 9F  94 01 24 05 62 91 20 FB  | // Image RSA Signalture 
+0x03  |  B2 3E 1E D7 BE B6 98 31  A0 BB 56 51 47 15 08 F3  | // Image RSA Signalture
+0x04  |  FF E0 5B 2A 89 93 A2 28  32 41 F6 93 02 8E 11 46  | // Image RSA Signalture
+0x05  |  1B 9F 8F D2 F9 4D 18 BF  44 D8 98 F6 F6 45 7F C1  | // Image RSA Signalture
+0x06  |  CB 41 71 83 7A DA 30 07  6C FA CD A4 A1 DF A0 56  | // Image RSA Signalture
+0x07  |  5E B7 E0 F4 88 E9 D3 1F  EB 24 24 11 50 18 91 06  | // Image RSA Signalture
+0x08  |  25 98 49 19 08 47 59 10  52 F8 06 AD 79 CA ED 87  | // Image RSA Signalture
+0x09  |  96 1F F9 2F 8F B3 2B 3C  A8 35 7B A8 E2 C3 44 77  | // Image RSA Signalture
+
+0x0A  |  00 01                                             | // HWID count (length is (count*16))
+0x0A  |        00 07                                       | // FWID count (length is (count*16))
+0x0A  |              FE                                    | // SomeFWid bitmap
+0x0A  |                 00 00 00  00 00 00 00 00 00 00 00  |
+0x0B  |  D0 31 07 83 42 C8 8D A7  87 FD 38 62 D5 D2 A7 2A  | // HWID
+0x0C  |  DE 9C 75 1A 1A 8D 34 E0  AB 4C 9B 45 23 05 96 68  | // FWID 1
+0x0D  |  65 42 1C C0 72 6A 83 15  DB F8 F2 30 5A 34 F3 B7  | // FWID 2
+0x0E  |  6A 4F D0 8E 8D C4 AE A8  84 31 30 34 A9 3D 8C 49  | // FWID 3
+0x0F  |  A8 6A F4 0E 7D 42 B5 8B  E4 8D 4F 57 D4 51 74 4C  | // FWID 4
+0x10  |  01 C9 D5 16 80 F2 9D DA  3F 21 4E 4B FE AB EE 7E  | // FWID 5
+0x11  |  EF 37 CE 8B D4 56 7F 7D  DB 4D 76 DF 9C 3F 1B 9F  | // FWID 6
+0x12  |  B7 9E 90 81 11 6B 1D 00  7A CA B6 D0 6F 40 6F 1C  | // FWID 7
+
+
+
+---------------------------------TP_HEADER-----------------------------------------
+0x00  |  00 00 01 00                                        | // Unknown
+0x00  |              55 AA 9D D1  A8 C8 83 31 C9 69 FB BF   | // TP_HEADER_MAGIC
+0x01  |  BC F0 D4 32 70 C7 AA 55                            | // TP_HEADER_MAGIC
+0x01  |                           41 08 00 00 41 08 00 00   |
+0x02  |  00 00 00 00 00 00                                  |
+0x02  |                    00 09                            | // part count? (I guess)
+0x02  |                           00 00 00 00               | // facboot_part_offset
+0x02  |                                       00 10 00 00   | // facboot_part_size
+0x03  |  00 36 00 00                                        | // factory_info_offset
+0x03  |              00 02 00 00                            | // factory_info_size
+0x03  |                           00 18 00 00               | // art_offset
+0x03  |                                       00 0A 00 00   | // art_size
+0x04  |  00 68 00 00                                        | // config_offset
+0x04  |              00 20 00 00                            | // config_size
+0x04  |                           00 58 00 00               | // NormalBoot_offset
+0x04  |                                       00 0A 00 00   | // NormalBoot_size
+0x05  |  00 88 00 00                                        | // tp_header_offset
+0x05  |              00 02 00 00                            | // tp_header_size
+0x05  |                           00 8E 00 00               | // BootingKernel_offset
+0x05  |                                       00 56 00 00   | // BootingKernel_size
+0x06  |  00 F0 00 00                                        | // Rootfs_offset
+0x06  |              02 8E 00 00                            | // Rootfs_size
+0x06  |                           07 24 00 00               | // RootfsData_offset
+0x06  |                                       00 DC 00 00   | // RootfsData_size
+
+0x07  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
+0x08  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
+0x09  |  94 56 06 9A 73 B5 A1 34  A4 1F 61 E5 CF 2A 9C BB   |
+0x0A  |  BC 42 8E 58 CB CA D2 FB  27 8C 03 78 3F 94 5A 23   |
+0x0B  |  CC E8 C3 FF 8D 02 8D 75  C8 6C 68 8F 72 03 B6 B6   |
+0x0C  |  37 44 52 37 32 39 39 4D  56 31 00 00 00 00 00 02   |
+0x0D  |  EF 37 CE 8B D4 56 7F 7D  DB 4D 76 DF 9C 3F 1B 9F   |
+0x0E  |  B7 9E 90 81 11 6B 1D 00  7A CA B6 D0 6F 40 6F 1C   |
+0x0F  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
+0x10  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
+
+
+
+
+--------------------------factory_info---------------------------
+0x00  |  4D 31 43 54                                        | // FACTORY_INFO_MAGIC_HEADER
+0x00  |              05 98                                  | // factory_info size
+0x00  |                    00 01                            | // UNKNOWN
+0x00  |                           6C 58 4C 6F 18 50 49 8D   | // facinfo md5 sum value
+0x01  |  0E 80 73 6F 43 9F 98 32                            | // facinfo md5 sum value
+0x01  |                           00 00 00 06 62 A3 34 65   | // facinfo start ([uint16 type][uint16 size][uint8 data[size]]......)
+0x02  |  52 1E 00 01 00 08 00 00  00 00 00 00 00 00         |
+    ............
+    // type  len  description
+    //  00    06   macaddress
+    //  01    08   Unknown (all zero)
+    //  02    20   DevID (What is this? Seems tplink uses this to check the upgrade_image signature)
+    //  03
+    // 
+    // 

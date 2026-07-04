@@ -1,0 +1,12 @@
+
+normal_boot_start 0x00000200
+normal_boot_end   0x000A01FF // size 0x000A0000
+|||||
+tp_header_start   0x000A0200
+tp_header_stop    0x000C01FF // size 0x00020000
+|||||
+kernel_start      0x000C0200
+kernel_end        0x006201FF // size 0x00560000
+|||||
+rootfs_start      0x00620200
+rootfs_stop       end
