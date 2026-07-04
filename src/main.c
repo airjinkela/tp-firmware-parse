@@ -153,13 +153,31 @@ struct ImageTpHeader
 	uint32_t RootfsData_size;
 };
 
+struct ImageParts
+{
+	uint8_t *facboot_data;
+	int facboot_size;
+
+	uint8_t *normal_boot_data;
+	int normal_boot_size;
+
+	uint8_t *tp_header_data;
+	int tp_header_size;
+
+	uint8_t *kernel_data;
+	int kernel_size;
+
+	uint8_t *rootfs_data;
+	int rootfs_size;
+};
+
 
 struct ImageInfo
 {
 	struct ImageHeader header;
 	struct ImageTpHeader tpheader;
+	struct ImageParts parts;
 };
-
 
 struct map_file_info
 {
@@ -303,26 +321,10 @@ int parse_tp_image_header(uint8_t *map, struct ImageHeader *o_info)
 		}
 	}
 
-	/*
-	for (int i=0; i<o_info->hwid_count; i++)
-	{
-		for(int j=0;j<16;j++)
-			printf("%02X", *(uint8_t*) (((void*)o_info->hwid)+j+i*16) );
-		printf("\n"); 
-	}
-
-	for (int i=0; i<o_info->fwid_count; i++)
-	{	
-		for(int j=0;j<16;j++)
-			printf("%02X", *(uint8_t*)  (((void*)o_info->fwid)+j+i*16) );
-		printf("\n"); 
-	}
-	*/
-
 	return 0;
 }
 
-int prase_tp_image_tpheader(uint8_t *map, struct ImageInfo *imgif)
+int parse_tp_image_tpheader(uint8_t *map, struct ImageInfo *imgif)
 {
 	size_t tp_header_offset = 0;
 	tp_header_offset += imgif->header.header_size;
@@ -361,48 +363,86 @@ int prase_tp_image_tpheader(uint8_t *map, struct ImageInfo *imgif)
 	imgif->tpheader.Rootfs_size = htonl(tp_header->Rootfs_size);
 	imgif->tpheader.RootfsData_offset = htonl(tp_header->RootfsData_offset);
 	imgif->tpheader.RootfsData_size = htonl(tp_header->RootfsData_size);
-/*
-	for (int i=0; i<20; i++)
-	{
-		printf("%X", tp_header->magic_header[i]);
-	}
-	printf("\n");
-	printf("facboot_part_offset: %d\n", imgif->tpheader.facboot_part_offset);
-	printf("facboot_part_size: %d\n", imgif->tpheader.facboot_part_size);
-	printf("factory_info_offset: %d\n", imgif->tpheader.factory_info_offset);
-	printf("factory_info_size: %d\n", imgif->tpheader.factory_info_size);
-	printf("art_offset: %d\n", imgif->tpheader.art_offset);
-	printf("art_size: %d\n", imgif->tpheader.art_size);
-	printf("config_offset: %d\n", imgif->tpheader.config_offset);
-	printf("config_size: %d\n", imgif->tpheader.config_size);
-	printf("NormalBoot_offset: %d\n", imgif->tpheader.NormalBoot_offset);
-	printf("NormalBoot_size: %d\n", imgif->tpheader.NormalBoot_size);
-	printf("tp_header_offset: %d\n", imgif->tpheader.tp_header_offset);
-	printf("tp_header_size: %d\n", imgif->tpheader.tp_header_size);
-	printf("BootingKernel_offset: %d\n", imgif->tpheader.BootingKernel_offset);
-	printf("BootingKernel_size: %d\n", imgif->tpheader.BootingKernel_size);
-	printf("Rootfs_offset: %d\n", imgif->tpheader.Rootfs_offset);
-	printf("Rootfs_size: %d\n", imgif->tpheader.Rootfs_size);
-	printf("RootfsData_offset: %d\n", imgif->tpheader.RootfsData_offset);
-	printf("RootfsData_size: %d\n", imgif->tpheader.RootfsData_size);
-*/
 
 	return 0;
 }
 
-int prase_image(uint8_t *map, struct ImageInfo *imgif)
+int parse_image_parts(uint8_t *map, struct ImageInfo *imgif)
+{
+	uint8_t *fw_start = (void*)map + imgif->header.header_size;
+	uint8_t *normal_boot_start = fw_start;
+
+	if (imgif->header.have_facboot)
+	{
+		normal_boot_start += imgif->tpheader.facboot_part_size;
+		imgif->parts.facboot_data = fw_start;
+		imgif->parts.facboot_size = imgif->tpheader.facboot_part_size;
+	}
+	else
+	{
+		imgif->parts.facboot_data = NULL;
+		imgif->parts.facboot_size = 0;
+	}
+
+	if (imgif->header.have_normal_boot)
+	{
+		imgif->parts.normal_boot_data = normal_boot_start;
+		imgif->parts.normal_boot_size = imgif->tpheader.NormalBoot_size;
+	}
+	else
+	{
+		imgif->parts.normal_boot_data = NULL;
+		imgif->parts.normal_boot_size = 0;
+	}
+
+	uint8_t *tp_header_start = normal_boot_start + imgif->parts.normal_boot_size;
+	imgif->parts.tp_header_data = tp_header_start;
+	imgif->parts.tp_header_size = imgif->tpheader.tp_header_size;
+
+	uint8_t *kernel_start = tp_header_start + imgif->parts.tp_header_size;
+	if (imgif->header.have_rootfs)
+	{
+		imgif->parts.kernel_data = kernel_start;
+		imgif->parts.kernel_size = imgif->tpheader.BootingKernel_size;
+
+		uint8_t *rootfs_start = kernel_start + imgif->parts.kernel_size;
+		imgif->parts.rootfs_data = rootfs_start;
+		imgif->parts.rootfs_size = imgif->tpheader.Rootfs_size;
+	}
+	else
+	{
+		imgif->parts.kernel_data = NULL;
+		imgif->parts.kernel_size = 0;
+		imgif->parts.rootfs_data = NULL;
+		imgif->parts.rootfs_size = 0;
+	}
+}
+
+int parse_image_headers(uint8_t *map, struct ImageInfo *imgif)
 {
 	int ret;
 
 	ret = parse_tp_image_header(map, &(imgif->header));
 	if (ret) return ret;
-	ret = prase_tp_image_tpheader(map, imgif);
+	ret = parse_tp_image_tpheader(map, imgif);
 	if (ret) return ret;
 
 	return 0;
 }
 
-void print_image_info(struct ImageInfo *imgif)
+int parse_image(uint8_t *map, struct ImageInfo *imgif)
+{
+	int ret;
+	ret = parse_image_headers(map, imgif);
+	if (ret) return ret;
+
+	ret = parse_image_parts(map, imgif);
+	if (ret) return ret;
+
+	return 0;
+}
+
+void print_image_header_info(struct ImageInfo *imgif)
 {
 	prinfo("==========================Image Header==========================\n");
 	prinfo("Image Header Magic Code: ");
@@ -470,6 +510,24 @@ void print_image_info(struct ImageInfo *imgif)
 	prinfo("================================================================\n");
 }
 
+void print_image_part_info(struct ImageInfo *imgif)
+{
+	prinfo("==========================Image Parts===========================\n");
+	prinfo("PartName       PartAddress         PartSize\n");
+	if (imgif->parts.facboot_size)
+		prinfo("FacBoot:       %016p    0x%08X\n", imgif->parts.facboot_data, imgif->parts.facboot_size);
+	if (imgif->parts.normal_boot_size)
+		prinfo("NormalBoot:    %016p    0x%08X\n", imgif->parts.normal_boot_data, imgif->parts.normal_boot_size);
+	if (imgif->parts.tp_header_size)
+		prinfo("TpHeader:      %016p    0x%08X\n", imgif->parts.tp_header_data, imgif->parts.tp_header_size);
+	if (imgif->parts.kernel_size)
+		prinfo("BootingKernel: %016p    0x%08X\n", imgif->parts.kernel_data, imgif->parts.kernel_size);
+	if (imgif->parts.rootfs_size)
+		prinfo("Rootfs:        %016p    0x%08X\n", imgif->parts.rootfs_data, imgif->parts.rootfs_size);
+	prinfo("================================================================\n");
+}
+
+
 int main(int argc, char *argv[])
 {
 	if (argc < 2)
@@ -491,10 +549,10 @@ int main(int argc, char *argv[])
 
 	struct ImageInfo image;
 
-	prase_image(map, &image);
+	parse_image(map, &image);
 
-	print_image_info(&image);
-
+	print_image_header_info(&image);
+	print_image_part_info(&image);
 	unmmap_file(map_p);
 	return 0;
 }
