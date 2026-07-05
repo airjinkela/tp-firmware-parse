@@ -7,7 +7,9 @@ SRCDIR=$(BASEDIR)/src
 SRCS:=$(wildcard $(SRCDIR)/*.c)
 OBJS:=$(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
 
+CFLAGS += -Wall
 LDFLAGS += -static
+
 
 all: main
 

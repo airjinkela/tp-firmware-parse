@@ -10,7 +10,9 @@
 #include <arpa/inet.h>
 
 
-#define	perr(format, args...) fprintf(stderr, "[%s:%d]" format ": %s\n", __func__ , __LINE__ , ##args, strerror(errno))
+#define	perr(format, args...) \
+	  fprintf(stderr, "[%s:%d]" format ": %s\n", \
+		  __func__ , __LINE__ , ##args, strerror(errno))
 
 #define	prinfo(format, args...) fprintf(stdout, format, ##args)
 #define prhex(x, s) \
@@ -45,7 +47,6 @@ const uint8_t default_tpheader_magic[] =
 	0xBC, 0xF0, 0xD4, 0x32,
 	0x70, 0xC7, 0xAA, 0x55
 };
-
 
 enum ContentType
 {
@@ -98,6 +99,13 @@ struct ImageHeader
 	bool have_rootfs;
 };
 
+// just don't know what this macro definition should be called
+#define UNKNOWN(name) \
+	struct { \
+		uint32_t offset; \
+		uint32_t size; \
+	} name;
+
 struct TpHeaderData
 {
 	uint16_t resv[2];
@@ -105,24 +113,15 @@ struct TpHeaderData
 	uint8_t unknown[14];
 	uint16_t part_count;
 
-	uint32_t facboot_part_offset;
-	uint32_t facboot_part_size;
-	uint32_t factory_info_offset;
-	uint32_t factory_info_size;
-	uint32_t art_offset;
-	uint32_t art_size;
-	uint32_t config_offset;
-	uint32_t config_size;
-	uint32_t NormalBoot_offset;
-	uint32_t NormalBoot_size;
-	uint32_t tp_header_offset;
-	uint32_t tp_header_size;
-	uint32_t BootingKernel_offset;
-	uint32_t BootingKernel_size;
-	uint32_t Rootfs_offset;
-	uint32_t Rootfs_size;
-	uint32_t RootfsData_offset;
-	uint32_t RootfsData_size;
+	UNKNOWN(facboot);
+	UNKNOWN(factory_info);
+	UNKNOWN(art);
+	UNKNOWN(config);
+	UNKNOWN(NormalBoot);
+	UNKNOWN(tp_header);
+	UNKNOWN(BootingKernel);
+	UNKNOWN(Rootfs);
+	UNKNOWN(RootfsData);
 };
 
 struct ImageTpHeader
@@ -133,44 +132,50 @@ struct ImageTpHeader
 
 	uint16_t part_count;
 
-	uint32_t facboot_part_offset;
-	uint32_t facboot_part_size;
-	uint32_t factory_info_offset;
-	uint32_t factory_info_size;
-	uint32_t art_offset;
-	uint32_t art_size;
-	uint32_t config_offset;
-	uint32_t config_size;
-	uint32_t NormalBoot_offset;
-	uint32_t NormalBoot_size;
-	uint32_t tp_header_offset;
-	uint32_t tp_header_size;
-	uint32_t BootingKernel_offset;
-	uint32_t BootingKernel_size;
-	uint32_t Rootfs_offset;
-	uint32_t Rootfs_size;
-	uint32_t RootfsData_offset;
-	uint32_t RootfsData_size;
+	UNKNOWN(facboot);
+	UNKNOWN(factory_info);
+	UNKNOWN(art);
+	UNKNOWN(config);
+	UNKNOWN(NormalBoot);
+	UNKNOWN(tp_header);
+	UNKNOWN(BootingKernel);
+	UNKNOWN(Rootfs);
+	UNKNOWN(RootfsData);
 };
+#undef UNKNOWN
 
 struct ImageParts
 {
-	uint8_t *facboot_data;
-	int facboot_size;
+	struct
+	{
+		uint8_t *data;
+		int size;
+	} facboot;
 
-	uint8_t *normal_boot_data;
-	int normal_boot_size;
+	struct
+	{
+		uint8_t *data;
+		int size;
+	} normal_boot;
 
-	uint8_t *tp_header_data;
-	int tp_header_size;
+	struct
+	{
+		uint8_t *data;
+		int size;
+	} tp_header;
 
-	uint8_t *kernel_data;
-	int kernel_size;
+	struct
+	{
+		uint8_t *data;
+		int size;
+	} kernel;
 
-	uint8_t *rootfs_data;
-	int rootfs_size;
+	struct
+	{
+		uint8_t *data;
+		int size;
+	} rootfs;
 };
-
 
 struct ImageInfo
 {
@@ -186,7 +191,38 @@ struct map_file_info
 	uint8_t *mmaped;
 };
 
-uint8_t **mmap_file(char *path, size_t size, ssize_t *size_maped)
+int save_data_to_file(char *file_name, char *parent_dir, void *data, size_t size)
+{
+	int ret;
+	char buf[256];
+
+	ret = mkdir(parent_dir, 0755);
+	if (ret == -1 && errno != EEXIST)
+	{
+			fprintf(stderr, "failed to create dir: %s: %s\n", parent_dir, strerror(errno));
+			return -1;
+	}
+
+	snprintf(buf, 256, "%s/%s", parent_dir, file_name);
+
+	int fd = open(buf, O_CREAT | O_WRONLY, 0777);
+	if (fd < 0)
+	{
+		perr("open");
+		return fd;
+	}
+
+	write(fd, data, size);
+
+	fsync(fd);
+
+	close(fd);
+
+	return 0;
+}
+
+
+uint8_t **mmap_file(char *path, size_t size, size_t *size_maped)
 {
 	int fd;
 	int ret;
@@ -345,24 +381,25 @@ int parse_tp_image_tpheader(uint8_t *map, struct ImageInfo *imgif)
 	}
 
 	imgif->tpheader.part_count = htons(tp_header->part_count);
-	imgif->tpheader.facboot_part_offset = htonl(tp_header->facboot_part_offset);
-	imgif->tpheader.facboot_part_size = htonl(tp_header->facboot_part_size);
-	imgif->tpheader.factory_info_offset = htonl(tp_header->factory_info_offset);
-	imgif->tpheader.factory_info_size = htonl(tp_header->factory_info_size);
-	imgif->tpheader.art_offset = htonl(tp_header->art_offset);
-	imgif->tpheader.art_size = htonl(tp_header->art_size);
-	imgif->tpheader.config_offset = htonl(tp_header->config_offset);
-	imgif->tpheader.config_size = htonl(tp_header->config_size);
-	imgif->tpheader.NormalBoot_offset = htonl(tp_header->NormalBoot_offset);
-	imgif->tpheader.NormalBoot_size = htonl(tp_header->NormalBoot_size);
-	imgif->tpheader.tp_header_offset = htonl(tp_header->tp_header_offset);
-	imgif->tpheader.tp_header_size = htonl(tp_header->tp_header_size);
-	imgif->tpheader.BootingKernel_offset = htonl(tp_header->BootingKernel_offset);
-	imgif->tpheader.BootingKernel_size = htonl(tp_header->BootingKernel_size);
-	imgif->tpheader.Rootfs_offset = htonl(tp_header->Rootfs_offset);
-	imgif->tpheader.Rootfs_size = htonl(tp_header->Rootfs_size);
-	imgif->tpheader.RootfsData_offset = htonl(tp_header->RootfsData_offset);
-	imgif->tpheader.RootfsData_size = htonl(tp_header->RootfsData_size);
+
+	imgif->tpheader.facboot.offset = htonl(tp_header->facboot.offset);
+	imgif->tpheader.facboot.size = htonl(tp_header->facboot.size);
+	imgif->tpheader.factory_info.offset = htonl(tp_header->factory_info.offset);
+	imgif->tpheader.factory_info.size = htonl(tp_header->factory_info.size);
+	imgif->tpheader.art.offset = htonl(tp_header->art.offset);
+	imgif->tpheader.art.size = htonl(tp_header->art.offset);
+	imgif->tpheader.config.offset = htonl(tp_header->config.offset);
+	imgif->tpheader.config.size = htonl(tp_header->config.size);
+	imgif->tpheader.NormalBoot.offset = htonl(tp_header->NormalBoot.offset);
+	imgif->tpheader.NormalBoot.size = htonl(tp_header->NormalBoot.size);
+	imgif->tpheader.tp_header.offset = htonl(tp_header->tp_header.offset);
+	imgif->tpheader.tp_header.size = htonl(tp_header->tp_header.size);
+	imgif->tpheader.BootingKernel.offset = htonl(tp_header->BootingKernel.offset);
+	imgif->tpheader.BootingKernel.size = htonl(tp_header->BootingKernel.size);
+	imgif->tpheader.Rootfs.offset = htonl(tp_header->Rootfs.offset);
+	imgif->tpheader.Rootfs.size = htonl(tp_header->Rootfs.size);
+	imgif->tpheader.RootfsData.offset = htonl(tp_header->RootfsData.offset);
+	imgif->tpheader.RootfsData.size = htonl(tp_header->RootfsData.size);
 
 	return 0;
 }
@@ -374,48 +411,49 @@ int parse_image_parts(uint8_t *map, struct ImageInfo *imgif)
 
 	if (imgif->header.have_facboot)
 	{
-		normal_boot_start += imgif->tpheader.facboot_part_size;
-		imgif->parts.facboot_data = fw_start;
-		imgif->parts.facboot_size = imgif->tpheader.facboot_part_size;
+		normal_boot_start += imgif->tpheader.facboot.size;
+		imgif->parts.facboot.data = fw_start;
+		imgif->parts.facboot.size = imgif->tpheader.facboot.size;
 	}
 	else
 	{
-		imgif->parts.facboot_data = NULL;
-		imgif->parts.facboot_size = 0;
+		imgif->parts.facboot.data = NULL;
+		imgif->parts.facboot.size = 0;
 	}
 
 	if (imgif->header.have_normal_boot)
 	{
-		imgif->parts.normal_boot_data = normal_boot_start;
-		imgif->parts.normal_boot_size = imgif->tpheader.NormalBoot_size;
+		imgif->parts.normal_boot.data = normal_boot_start;
+		imgif->parts.normal_boot.size = imgif->tpheader.NormalBoot.size;
 	}
 	else
 	{
-		imgif->parts.normal_boot_data = NULL;
-		imgif->parts.normal_boot_size = 0;
+		imgif->parts.normal_boot.data = NULL;
+		imgif->parts.normal_boot.size = 0;
 	}
 
-	uint8_t *tp_header_start = normal_boot_start + imgif->parts.normal_boot_size;
-	imgif->parts.tp_header_data = tp_header_start;
-	imgif->parts.tp_header_size = imgif->tpheader.tp_header_size;
+	uint8_t *tp_header_start = normal_boot_start + imgif->parts.normal_boot.size;
+	imgif->parts.tp_header.data = tp_header_start;
+	imgif->parts.tp_header.size = imgif->tpheader.tp_header.size;
 
-	uint8_t *kernel_start = tp_header_start + imgif->parts.tp_header_size;
+	uint8_t *kernel_start = tp_header_start + imgif->parts.tp_header.size;
 	if (imgif->header.have_rootfs)
 	{
-		imgif->parts.kernel_data = kernel_start;
-		imgif->parts.kernel_size = imgif->tpheader.BootingKernel_size;
+		imgif->parts.kernel.data = kernel_start;
+		imgif->parts.kernel.size = imgif->tpheader.BootingKernel.size;
 
-		uint8_t *rootfs_start = kernel_start + imgif->parts.kernel_size;
-		imgif->parts.rootfs_data = rootfs_start;
-		imgif->parts.rootfs_size = imgif->tpheader.Rootfs_size;
+		uint8_t *rootfs_start = kernel_start + imgif->parts.kernel.size;
+		imgif->parts.rootfs.data = rootfs_start;
+		imgif->parts.rootfs.size = imgif->tpheader.Rootfs.size;
 	}
 	else
 	{
-		imgif->parts.kernel_data = NULL;
-		imgif->parts.kernel_size = 0;
-		imgif->parts.rootfs_data = NULL;
-		imgif->parts.rootfs_size = 0;
+		imgif->parts.kernel.data = NULL;
+		imgif->parts.kernel.size = 0;
+		imgif->parts.rootfs.data = NULL;
+		imgif->parts.rootfs.size = 0;
 	}
+	return 0;
 }
 
 int parse_image_headers(uint8_t *map, struct ImageInfo *imgif)
@@ -439,6 +477,22 @@ int parse_image(uint8_t *map, struct ImageInfo *imgif)
 	ret = parse_image_parts(map, imgif);
 	if (ret) return ret;
 
+	return 0;
+}
+
+int dump_image(struct ImageInfo *imgif)
+{
+	char *save_dir = "out";
+	save_data_to_file("facboot.bin", save_dir,
+		imgif->parts.facboot.data,  imgif->parts.facboot.size);
+	save_data_to_file("normal_boot.bin", save_dir,
+		imgif->parts.normal_boot.data,  imgif->parts.normal_boot.size);
+	save_data_to_file("tp_header.bin", save_dir,
+		imgif->parts.tp_header.data,  imgif->parts.tp_header.size);
+	save_data_to_file("kernel.bin", save_dir,
+		imgif->parts.kernel.data,  imgif->parts.kernel.size);
+	save_data_to_file("rootfs.bin", save_dir,
+		imgif->parts.rootfs.data,  imgif->parts.rootfs.size);
 	return 0;
 }
 
@@ -490,23 +544,23 @@ void print_image_header_info(struct ImageInfo *imgif)
 	prinfo("Tp Part Count: %d\n", imgif->tpheader.part_count);
 	prinfo("PartName       PartOffset       PartSize\n");
 	prinfo("FacBoot:       0x%08X       0x%08X\n",
-		imgif->tpheader.facboot_part_offset, imgif->tpheader.facboot_part_size);
+		imgif->tpheader.facboot.size, imgif->tpheader.facboot.offset);
 	prinfo("FactoryInfo:   0x%08X       0x%08X\n",
-		imgif->tpheader.factory_info_offset, imgif->tpheader.factory_info_size);
+		imgif->tpheader.factory_info.size, imgif->tpheader.factory_info.offset);
 	prinfo("Art:           0x%08X       0x%08X\n",
-		imgif->tpheader.art_offset, imgif->tpheader.art_size);
+		imgif->tpheader.art.size, imgif->tpheader.art.offset);
 	prinfo("Config:        0x%08X       0x%08X\n",
-		imgif->tpheader.config_offset, imgif->tpheader.config_size);
+		imgif->tpheader.config.size, imgif->tpheader.config.offset);
 	prinfo("NormalBoot:    0x%08X       0x%08X\n",
-		imgif->tpheader.NormalBoot_offset, imgif->tpheader.NormalBoot_size);
+		imgif->tpheader.NormalBoot.size, imgif->tpheader.NormalBoot.offset);
 	prinfo("TpHeader:      0x%08X       0x%08X\n",
-		imgif->tpheader.tp_header_offset, imgif->tpheader.tp_header_size);
+		imgif->tpheader.tp_header.size, imgif->tpheader.tp_header.offset);
 	prinfo("BootingKernel: 0x%08X       0x%08X\n",
-		imgif->tpheader.BootingKernel_offset, imgif->tpheader.BootingKernel_size);
+		imgif->tpheader.BootingKernel.size, imgif->tpheader.BootingKernel.offset);
 	prinfo("Rootfs:        0x%08X       0x%08X\n",
-		imgif->tpheader.Rootfs_offset, imgif->tpheader.Rootfs_size);
+		imgif->tpheader.Rootfs.size, imgif->tpheader.Rootfs.offset);
 	prinfo("RootfsData:    0x%08X       0x%08X\n",
-		imgif->tpheader.RootfsData_offset, imgif->tpheader.RootfsData_size);
+		imgif->tpheader.RootfsData.size, imgif->tpheader.RootfsData.offset);
 	prinfo("================================================================\n");
 }
 
@@ -514,16 +568,21 @@ void print_image_part_info(struct ImageInfo *imgif)
 {
 	prinfo("==========================Image Parts===========================\n");
 	prinfo("PartName       PartAddress         PartSize\n");
-	if (imgif->parts.facboot_size)
-		prinfo("FacBoot:       %016p    0x%08X\n", imgif->parts.facboot_data, imgif->parts.facboot_size);
-	if (imgif->parts.normal_boot_size)
-		prinfo("NormalBoot:    %016p    0x%08X\n", imgif->parts.normal_boot_data, imgif->parts.normal_boot_size);
-	if (imgif->parts.tp_header_size)
-		prinfo("TpHeader:      %016p    0x%08X\n", imgif->parts.tp_header_data, imgif->parts.tp_header_size);
-	if (imgif->parts.kernel_size)
-		prinfo("BootingKernel: %016p    0x%08X\n", imgif->parts.kernel_data, imgif->parts.kernel_size);
-	if (imgif->parts.rootfs_size)
-		prinfo("Rootfs:        %016p    0x%08X\n", imgif->parts.rootfs_data, imgif->parts.rootfs_size);
+	if (imgif->parts.facboot.size)
+		prinfo("FacBoot:       %16p    0x%08X\n",
+			imgif->parts.facboot.data, imgif->parts.facboot.size);
+	if (imgif->parts.normal_boot.size)
+		prinfo("NormalBoot:    %16p    0x%08X\n",
+			imgif->parts.normal_boot.data, imgif->parts.normal_boot.size);
+	if (imgif->parts.tp_header.size)
+		prinfo("TpHeader:      %16p    0x%08X\n",
+			imgif->parts.tp_header.data, imgif->parts.tp_header.size);
+	if (imgif->parts.kernel.size)
+		prinfo("BootingKernel: %16p    0x%08X\n",
+			imgif->parts.kernel.data, imgif->parts.kernel.size);
+	if (imgif->parts.rootfs.size)
+		prinfo("Rootfs:        %16p    0x%08X\n",
+			imgif->parts.rootfs.data, imgif->parts.rootfs.size);
 	prinfo("================================================================\n");
 }
 
@@ -539,6 +598,9 @@ int main(int argc, char *argv[])
 	size_t maped_size;
 
 	uint8_t **map_p = mmap_file(argv[1], -1, &maped_size);
+	if (map_p == NULL)
+		return 1;
+
 	uint8_t *map = *map_p;
 
 	if (maped_size < sizeof(struct HeaderData))
@@ -553,6 +615,7 @@ int main(int argc, char *argv[])
 
 	print_image_header_info(&image);
 	print_image_part_info(&image);
+	dump_image(&image);
 	unmmap_file(map_p);
 	return 0;
 }

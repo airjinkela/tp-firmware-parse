@@ -56,7 +56,7 @@ The output will display the complete parsed information of the Image Header foll
 - **TP-Link 7DR7299** (or similar series routers)
 
 ## TODO
-- Split upgrade files into independent partitions
+- ~~Split upgrade files into independent partitions~~
 
 ## Links
 - [Tplink 7dr7299 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1779808801125266)
