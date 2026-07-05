@@ -60,6 +60,7 @@ The output will display the complete parsed information of the Image Header foll
 
 ## Links
 - [Tplink 7dr7299 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1779808801125266)
+- [Tplink 7dr7290 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1775814620215237)
 
 ## License
 

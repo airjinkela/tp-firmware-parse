@@ -9,6 +9,9 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
+typedef uint32_t  u32;
+typedef uint16_t u16;
+typedef uint8_t  u8;
 
 #define	perr(format, args...) \
 	  fprintf(stderr, "[%s:%d]" format ": %s\n", \
@@ -18,7 +21,7 @@
 #define prhex(x, s) \
 	do { \
 		for(int __i=0;__i<s;__i++) \
-			fprintf(stdout, "%02X", *(uint8_t*) (((void*)x)+__i) ); \
+			fprintf(stdout, "%02X", *(u8*) (((void*)x)+__i) ); \
 		fprintf(stdout, "\n"); \
 	} while(0)
 
@@ -28,9 +31,10 @@
 #define BIT(nr) (1UL << (nr))
 
 #define PART_SIZE_FACBOOT 0x00100000
-#define PART_SIZE_NORMAL_BOOT 0x000A0000
+#define PART_SIZE_NORMAL_BOOT_0 0x000A0000
+#define PART_SIZE_NORMAL_BOOT_1 0x00040000
 
-const uint8_t default_header_magic[] = 
+const u8 default_header_magic[] = 
 {
 	0x55, 0xAA, 0x4C, 0x5E,
 	0x83, 0x1F, 0x53, 0x4B,
@@ -39,7 +43,7 @@ const uint8_t default_header_magic[] =
 	0x7D, 0xA1, 0xAA, 0x55
 };
 
-const uint8_t default_tpheader_magic[] = 
+const u8 default_tpheader_magic[] = 
 {
 	0x55, 0xAA, 0x9D, 0xD1,
 	0xA8, 0xC8, 0x83, 0x31,
@@ -64,35 +68,35 @@ enum ContentTypeBIT
 
 struct HeaderData
 {
-	uint16_t resv[2];
-	uint8_t magic_header[20];
-	uint16_t header_size;
-	uint16_t vender_id;
-	uint16_t unknown0;
-	uint16_t content_type;
-	uint8_t image_rsa_sign[128];
-	uint16_t hwid_count;
-	uint16_t fwid_count;
-	uint8_t fwid_map;
-	uint8_t unknown1[11];
+	u16 resv[2];
+	u8 magic_header[20];
+	u16 header_size;
+	u16 vender_id;
+	u16 unknown0;
+	u16 content_type;
+	u8 image_rsa_sign[128];
+	u16 hwid_count;
+	u16 fwid_count;
+	u16 fwid_map;
+	u8 unknown1[10];
 };
 
 struct ImageHeader
 {
 	struct HeaderData *data;
 
-	uint8_t *magic_header;
-	uint16_t header_size;
-	uint16_t vender_id;
-	uint16_t content_type;
-	uint8_t *image_rsa_sign;
+	u8 *magic_header;
+	u16 header_size;
+	u16 vender_id;
+	u16 content_type;
+	u8 *image_rsa_sign;
 
-	uint16_t hwid_count;
-	uint8_t *hwid;
-	uint16_t fwid_count;
-	uint8_t *fwid;
+	u16 hwid_count;
+	u8 *hwid;
+	u16 fwid_count;
+	u8 *fwid;
 	
-	uint8_t fwid_map;
+	u16 fwid_map;
 
 	bool have_facboot;
 	bool have_normal_boot;
@@ -102,16 +106,16 @@ struct ImageHeader
 // just don't know what this macro definition should be called
 #define UNKNOWN(name) \
 	struct { \
-		uint32_t offset; \
-		uint32_t size; \
+		u32 offset; \
+		u32 size; \
 	} name;
 
 struct TpHeaderData
 {
-	uint16_t resv[2];
-	uint8_t magic_header[20];
-	uint8_t unknown[14];
-	uint16_t part_count;
+	u16 resv[2];
+	u8 magic_header[20];
+	u8 unknown[14];
+	u16 part_count;
 
 	UNKNOWN(facboot);
 	UNKNOWN(factory_info);
@@ -128,9 +132,9 @@ struct ImageTpHeader
 {
 	struct TpHeaderData *data;
 
-	uint8_t *magic_header;
+	u8 *magic_header;
 
-	uint16_t part_count;
+	u16 part_count;
 
 	UNKNOWN(facboot);
 	UNKNOWN(factory_info);
@@ -148,31 +152,31 @@ struct ImageParts
 {
 	struct
 	{
-		uint8_t *data;
+		u8 *data;
 		int size;
 	} facboot;
 
 	struct
 	{
-		uint8_t *data;
+		u8 *data;
 		int size;
 	} normal_boot;
 
 	struct
 	{
-		uint8_t *data;
+		u8 *data;
 		int size;
 	} tp_header;
 
 	struct
 	{
-		uint8_t *data;
+		u8 *data;
 		int size;
 	} kernel;
 
 	struct
 	{
-		uint8_t *data;
+		u8 *data;
 		int size;
 	} rootfs;
 };
@@ -188,7 +192,7 @@ struct map_file_info
 {
 	int fd;
 	ssize_t size;
-	uint8_t *mmaped;
+	u8 *mmaped;
 };
 
 int save_data_to_file(char *file_name, char *parent_dir, void *data, size_t size)
@@ -222,11 +226,11 @@ int save_data_to_file(char *file_name, char *parent_dir, void *data, size_t size
 }
 
 
-uint8_t **mmap_file(char *path, size_t size, size_t *size_maped)
+u8 **mmap_file(char *path, size_t size, size_t *size_maped)
 {
 	int fd;
 	int ret;
-	uint8_t *mmaped;
+	u8 *mmaped;
 	size_t map_size;
 	struct map_file_info *fi;
 
@@ -296,7 +300,7 @@ err_malloc:
 	return NULL;
 }
 
-int unmmap_file(uint8_t **map_p)
+int unmmap_file(u8 **map_p)
 {
 	struct map_file_info *fi;
 	fi = container_of(map_p, struct map_file_info, mmaped);
@@ -307,7 +311,7 @@ int unmmap_file(uint8_t **map_p)
 	return 0;
 }
 
-int parse_tp_image_header(uint8_t *map, struct ImageHeader *o_info)
+int parse_tp_image_header(u8 *map, struct ImageHeader *o_info)
 {
 	struct HeaderData *imd = (void*)map;
 	o_info->data = imd;
@@ -317,7 +321,7 @@ int parse_tp_image_header(uint8_t *map, struct ImageHeader *o_info)
 	o_info->content_type = htons(imd->content_type);
 	o_info->hwid_count = htons(imd->hwid_count);
 	o_info->fwid_count = htons(imd->fwid_count);
-	o_info->fwid_map = imd->fwid_map;
+	o_info->fwid_map = htons(imd->fwid_map);
 
 	o_info->magic_header = imd->magic_header;
 	o_info->image_rsa_sign = imd->image_rsa_sign;
@@ -330,12 +334,12 @@ int parse_tp_image_header(uint8_t *map, struct ImageHeader *o_info)
 
 	if (imd->hwid_count)
 	{
-		uint8_t *hwid = (void*)map + sizeof(struct HeaderData);	
+		u8 *hwid = (void*)map + sizeof(struct HeaderData);	
 		o_info->hwid = hwid;
 	}
 	if (imd->fwid_count)
 	{	
-		uint8_t *fwid = (void*)map + sizeof(struct HeaderData) + htons(imd->hwid_count)*16;
+		u8 *fwid = (void*)map + sizeof(struct HeaderData) + htons(imd->hwid_count)*16;
 		o_info->fwid = fwid;
 	}
 
@@ -360,12 +364,12 @@ int parse_tp_image_header(uint8_t *map, struct ImageHeader *o_info)
 	return 0;
 }
 
-int parse_tp_image_tpheader(uint8_t *map, struct ImageInfo *imgif)
+int parse_tp_image_tpheader(u8 *map, struct ImageInfo *imgif)
 {
 	size_t tp_header_offset = 0;
 	tp_header_offset += imgif->header.header_size;
 	if (imgif->header.have_normal_boot)
-		tp_header_offset += PART_SIZE_NORMAL_BOOT;
+		tp_header_offset += PART_SIZE_NORMAL_BOOT_0;
 	if (imgif->header.have_facboot)
 		tp_header_offset += PART_SIZE_FACBOOT;
 
@@ -404,10 +408,10 @@ int parse_tp_image_tpheader(uint8_t *map, struct ImageInfo *imgif)
 	return 0;
 }
 
-int parse_image_parts(uint8_t *map, struct ImageInfo *imgif)
+int parse_image_parts(u8 *map, struct ImageInfo *imgif)
 {
-	uint8_t *fw_start = (void*)map + imgif->header.header_size;
-	uint8_t *normal_boot_start = fw_start;
+	u8 *fw_start = (void*)map + imgif->header.header_size;
+	u8 *normal_boot_start = fw_start;
 
 	if (imgif->header.have_facboot)
 	{
@@ -432,17 +436,17 @@ int parse_image_parts(uint8_t *map, struct ImageInfo *imgif)
 		imgif->parts.normal_boot.size = 0;
 	}
 
-	uint8_t *tp_header_start = normal_boot_start + imgif->parts.normal_boot.size;
+	u8 *tp_header_start = normal_boot_start + imgif->parts.normal_boot.size;
 	imgif->parts.tp_header.data = tp_header_start;
 	imgif->parts.tp_header.size = imgif->tpheader.tp_header.size;
 
-	uint8_t *kernel_start = tp_header_start + imgif->parts.tp_header.size;
+	u8 *kernel_start = tp_header_start + imgif->parts.tp_header.size;
 	if (imgif->header.have_rootfs)
 	{
 		imgif->parts.kernel.data = kernel_start;
 		imgif->parts.kernel.size = imgif->tpheader.BootingKernel.size;
 
-		uint8_t *rootfs_start = kernel_start + imgif->parts.kernel.size;
+		u8 *rootfs_start = kernel_start + imgif->parts.kernel.size;
 		imgif->parts.rootfs.data = rootfs_start;
 		imgif->parts.rootfs.size = imgif->tpheader.Rootfs.size;
 	}
@@ -456,7 +460,7 @@ int parse_image_parts(uint8_t *map, struct ImageInfo *imgif)
 	return 0;
 }
 
-int parse_image_headers(uint8_t *map, struct ImageInfo *imgif)
+int parse_image_headers(u8 *map, struct ImageInfo *imgif)
 {
 	int ret;
 
@@ -468,7 +472,7 @@ int parse_image_headers(uint8_t *map, struct ImageInfo *imgif)
 	return 0;
 }
 
-int parse_image(uint8_t *map, struct ImageInfo *imgif)
+int parse_image(u8 *map, struct ImageInfo *imgif)
 {
 	int ret;
 	ret = parse_image_headers(map, imgif);
@@ -525,7 +529,7 @@ void print_image_header_info(struct ImageInfo *imgif)
 	if (imgif->header.fwid)
 	{
 		prinfo("Image FWID count: %d\n", imgif->header.fwid_count);
-		prinfo("Image FWID BitMap: %08b\n", imgif->header.fwid_map);
+		prinfo("Image FWID BitMap: %016b\n", imgif->header.fwid_map);
 		for (int i=0; i<imgif->header.fwid_count; i++)
 		{
 			prinfo("FWID %02d: ", i);
@@ -597,11 +601,11 @@ int main(int argc, char *argv[])
 
 	size_t maped_size;
 
-	uint8_t **map_p = mmap_file(argv[1], -1, &maped_size);
+	u8 **map_p = mmap_file(argv[1], -1, &maped_size);
 	if (map_p == NULL)
 		return 1;
 
-	uint8_t *map = *map_p;
+	u8 *map = *map_p;
 
 	if (maped_size < sizeof(struct HeaderData))
 	{
@@ -611,7 +615,11 @@ int main(int argc, char *argv[])
 
 	struct ImageInfo image;
 
-	parse_image(map, &image);
+	if (parse_image(map, &image))
+	{
+		fprintf(stderr, "Failed to parse image\n");
+		return 1;
+	}
 
 	print_image_header_info(&image);
 	print_image_part_info(&image);
