@@ -59,8 +59,10 @@ The output will display the complete parsed information of the Image Header foll
 - ~~Split upgrade files into independent partitions~~
 
 ## Links
-- [Tplink 7dr7299 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1779808801125266)
-- [Tplink 7dr7290 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1775814620215237)
+- [Tplink TL-7DR7299 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1779808801125266)
+- [Tplink TL-7DR7290 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1775814620215237)
+- [Tplink TL-XDR6088 Upgrade Firmware](https://resource.tp-link.com.cn/pc/docCenter/showDoc?id=1721727939475413)
+
 
 ## License
 
