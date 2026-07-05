@@ -61,12 +61,16 @@ tplink firmware partitions
 
 0x07  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
 0x08  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
+
 0x09  |  94 56 06 9A 73 B5 A1 34  A4 1F 61 E5 CF 2A 9C BB   |
 0x0A  |  BC 42 8E 58 CB CA D2 FB  27 8C 03 78 3F 94 5A 23   |
 0x0B  |  CC E8 C3 FF 8D 02 8D 75  C8 6C 68 8F 72 03 B6 B6   |
-0x0C  |  37 44 52 37 32 39 39 4D  56 31 00 00 00 00 00 02   |
-0x0D  |  EF 37 CE 8B D4 56 7F 7D  DB 4D 76 DF 9C 3F 1B 9F   |
-0x0E  |  B7 9E 90 81 11 6B 1D 00  7A CA B6 D0 6F 40 6F 1C   |
+
+0x0C  |  37 44 52 37 32 39 39 4D  56 31 00 00 00 00         | // Product Name (char*)
+0x0C  |                                             00 02   | // Support FWID count (I guess)
+0x0D  |  EF 37 CE 8B D4 56 7F 7D  DB 4D 76 DF 9C 3F 1B 9F   | // FWID 0
+0x0E  |  B7 9E 90 81 11 6B 1D 00  7A CA B6 D0 6F 40 6F 1C   | // FWID 1
+
 0x0F  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
 0x10  |  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   |
 
