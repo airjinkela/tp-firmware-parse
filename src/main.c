@@ -109,29 +109,35 @@ struct ImageHeader
 	bool have_rootfs;
 };
 
-// just don't know what this macro definition should be called
-#define UNKNOWN(name) \
-	struct { \
-		u32 offset; \
-		u32 size; \
-	} name;
+struct PartInfoData{
+	u32 offset;
+	u32 size;
+};
 
 struct TpHeaderData
 {
 	u16 resv[2];
 	u8 magic_header[20];
-	u8 unknown[14];
+	u8 unknown0[14];
 	u16 part_count;
 
-	UNKNOWN(facboot);
-	UNKNOWN(factory_info);
-	UNKNOWN(art);
-	UNKNOWN(config);
-	UNKNOWN(NormalBoot);
-	UNKNOWN(tp_header);
-	UNKNOWN(BootingKernel);
-	UNKNOWN(Rootfs);
-	UNKNOWN(RootfsData);
+	struct PartInfoData facboot;
+	struct PartInfoData factory_info;
+	struct PartInfoData art;
+	struct PartInfoData config;
+	struct PartInfoData NormalBoot;
+	struct PartInfoData tp_header;
+	struct PartInfoData BootingKernel;
+	struct PartInfoData Rootfs;
+	struct PartInfoData RootfsData;
+	u8 zero[32];
+
+	u8 unknown1[48];
+
+	char product_name[14];
+	u16 support_fwid_count;
+
+	// Unknown data
 };
 
 struct ImageTpHeader
@@ -142,17 +148,21 @@ struct ImageTpHeader
 
 	u16 part_count;
 
-	UNKNOWN(facboot);
-	UNKNOWN(factory_info);
-	UNKNOWN(art);
-	UNKNOWN(config);
-	UNKNOWN(NormalBoot);
-	UNKNOWN(tp_header);
-	UNKNOWN(BootingKernel);
-	UNKNOWN(Rootfs);
-	UNKNOWN(RootfsData);
+	struct PartInfoData facboot;
+	struct PartInfoData factory_info;
+	struct PartInfoData art;
+	struct PartInfoData config;
+	struct PartInfoData NormalBoot;
+	struct PartInfoData tp_header;
+	struct PartInfoData BootingKernel;
+	struct PartInfoData Rootfs;
+	struct PartInfoData RootfsData;
+
+	char *product_name;
+
+	u16 support_fwid_count;
+	u8 *support_fwid;
 };
-#undef UNKNOWN
 
 struct ImageParts
 {
@@ -432,6 +442,11 @@ int parse_tp_image_tpheader(u8 *map, struct ImageInfo *imgif)
 	imgif->tpheader.RootfsData.offset = htonl(tp_header->RootfsData.offset);
 	imgif->tpheader.RootfsData.size = htonl(tp_header->RootfsData.size);
 
+	imgif->tpheader.product_name = tp_header->product_name;
+	imgif->tpheader.support_fwid_count = htons(tp_header->support_fwid_count);
+
+	imgif->tpheader.support_fwid = (void*)tp_header + sizeof(struct TpHeaderData);
+
 	return 0;
 }
 
@@ -548,7 +563,7 @@ void print_image_header_info(struct ImageInfo *imgif)
 		prinfo("Image HWID count: %d\n", imgif->header.hwid_count);
 		for (int i=0; i<imgif->header.hwid_count; i++)
 		{
-			prinfo("HWID %02d: ", i);
+			prinfo("    HWID %02d: ", i);
 			prhex(imgif->header.hwid+(i*16), 16);
 		}
 	}
@@ -559,7 +574,7 @@ void print_image_header_info(struct ImageInfo *imgif)
 		prinfo("Image FWID BitMap: %016b\n", imgif->header.fwid_map);
 		for (int i=0; i<imgif->header.fwid_count; i++)
 		{
-			prinfo("FWID %02d: ", i);
+			prinfo("    FWID %02d: ", i);
 			prhex((imgif->header.fwid+(i*16)), 16);
 		}
 	}
@@ -592,6 +607,19 @@ void print_image_header_info(struct ImageInfo *imgif)
 		imgif->tpheader.Rootfs.size, imgif->tpheader.Rootfs.offset);
 	prinfo("RootfsData:    0x%08X       0x%08X\n",
 		imgif->tpheader.RootfsData.size, imgif->tpheader.RootfsData.offset);
+
+	prinfo("Product Name: %s\n", imgif->tpheader.product_name);
+
+	if (imgif->tpheader.support_fwid_count)
+	{
+		prinfo("Support FWID count: %d\n", imgif->tpheader.support_fwid_count);
+		for (int i=0; i<imgif->tpheader.support_fwid_count; i++)
+		{
+			prinfo("    FWID %02d: ", i);
+			prhex((imgif->tpheader.support_fwid+(i*16)), 16);
+		}
+	}
+
 	prinfo("================================================================\n");
 }
 

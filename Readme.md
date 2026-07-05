@@ -2,33 +2,6 @@
 
 A command-line tool for parsing TP-Link router firmware (`.bin`) binary files, written in C for POSIX systems (Linux).
 
-## Features
-
-- Parses the **Image Header**:
-  - Magic validation (`55 AA 4C 5E ...`)
-  - Header size, vendor ID
-  - Content type flags (NormalBoot / Rootfs / FacBoot presence)
-  - 128-byte RSA signature
-  - Hardware ID (HWID) list
-  - Firmware ID (FWID) list and bitmap
-- Parses the **TP Header** (partition table):
-  - Magic validation (`55 AA 9D D1 ...`)
-  - Partition count and offset/size for each partition:
-
-| Partition | Description |
-|---|---|
-| FacBoot | Factory boot partition |
-| FactoryInfo | Factory information partition |
-| Art | Atheros Radio Test partition |
-| Config | Configuration partition |
-| NormalBoot | Normal boot partition |
-| TpHeader | TP partition table itself |
-| BootingKernel | Booting kernel partition |
-| Rootfs | Root filesystem partition |
-| RootfsData | Root filesystem data partition |
-
-- Pretty-prints all parsed results in hex and decimal
-
 ## Compile
 
 ```bash

@@ -6,8 +6,7 @@ struct ID {
     u8 id[16];
 };
 
-struct ImageMeta
-{
+struct PartInfoData{
     u32 offset;
     u32 size;
 };
@@ -19,16 +18,22 @@ struct TpHeaderData
     u8 unknown[14];
     u16 part_count;
 
-    ImageMeta facboot;
-    ImageMeta factory_info;
-    ImageMeta art;
-    ImageMeta config;
-    ImageMeta NormalBoot;
-    ImageMeta tp_header;
-    ImageMeta BootingKernel;
-    ImageMeta Rootfs;
-    ImageMeta RootfsData;
-    u8 pad[tp_header.size - ($-addressof(resv))];
+    PartInfoData facboot;
+    PartInfoData factory_info;
+    PartInfoData art;
+    PartInfoData config;
+    PartInfoData NormalBoot;
+    PartInfoData tp_header;
+    PartInfoData BootingKernel;
+    PartInfoData Rootfs;
+    PartInfoData RootfsData;
+    u8 zero[32];
+    u8 unknown1[48];
+
+    char product_name[14];
+    u16 support_fwid_count;
+    ID fwid[support_fwid_count] [[color("17BECF")]];
+    u8 pad[tp_header.size - ($ - addressof(resv))];
 };
 
 struct HeaderData
@@ -50,4 +55,4 @@ struct HeaderData
 };
 
 HeaderData hd @ 0x0;
-TpHeaderData tp @ 0x40200;
+TpHeaderData tp @ 0xa0200;
