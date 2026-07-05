@@ -381,6 +381,7 @@ int parse_tp_image_tpheader(u8 *map, struct ImageInfo *imgif)
 	struct TpHeaderData *tp_header;
 
 	if (imgif->header.have_normal_boot){
+		bool is_tpheader_founded = false;
 		for (int i=0; i< sizeof(normal_boot_sizes)/sizeof(*normal_boot_sizes); i++)
 		{
 			u32 normal_boot_size = normal_boot_sizes[i];
@@ -396,8 +397,14 @@ int parse_tp_image_tpheader(u8 *map, struct ImageInfo *imgif)
 			{
 				fprintf(stderr, "found TpHeader AT 0x%08lX\n",
 					tp_header_offset + normal_boot_size);
+				is_tpheader_founded = true;
 				break;
 			}
+		}
+		if (!is_tpheader_founded)
+		{
+			fprintf(stderr, "TpHeader is not found\n");
+			return -1;
 		}
 	}
 
