@@ -34,6 +34,12 @@ typedef uint8_t  u8;
 #define PART_SIZE_NORMAL_BOOT_0 0x000A0000
 #define PART_SIZE_NORMAL_BOOT_1 0x00040000
 
+const u32 normal_boot_sizes[] =
+{
+	PART_SIZE_NORMAL_BOOT_0,
+	PART_SIZE_NORMAL_BOOT_1
+}; 
+
 const u8 default_header_magic[] = 
 {
 	0x55, 0xAA, 0x4C, 0x5E,
@@ -368,21 +374,35 @@ int parse_tp_image_tpheader(u8 *map, struct ImageInfo *imgif)
 {
 	size_t tp_header_offset = 0;
 	tp_header_offset += imgif->header.header_size;
-	if (imgif->header.have_normal_boot)
-		tp_header_offset += PART_SIZE_NORMAL_BOOT_0;
+
 	if (imgif->header.have_facboot)
 		tp_header_offset += PART_SIZE_FACBOOT;
 
-	struct TpHeaderData *tp_header = (void*)map + tp_header_offset;
-	imgif->tpheader.data = tp_header;
+	struct TpHeaderData *tp_header;
 
+	if (imgif->header.have_normal_boot){
+		for (int i=0; i< sizeof(normal_boot_sizes)/sizeof(*normal_boot_sizes); i++)
+		{
+			u32 normal_boot_size = normal_boot_sizes[i];
+			tp_header = (void*)map + tp_header_offset + normal_boot_size;
 
-	imgif->tpheader.magic_header = tp_header->magic_header;
-	if (memcmp(imgif->tpheader.magic_header, default_tpheader_magic, sizeof(default_tpheader_magic)))
-	{
-		prinfo("image tpheader magic is mot a valid tpheader magic\n");
-		return -1;
+			if (memcmp(tp_header->magic_header, default_tpheader_magic, sizeof(default_tpheader_magic)))
+			{
+				fprintf(stderr, "image TpHeader magic is mot a valid TpHeader magic AT 0x%08lX\n",
+					tp_header_offset + normal_boot_size);
+				continue;
+			}
+			else 
+			{
+				fprintf(stderr, "found TpHeader AT 0x%08lX\n",
+					tp_header_offset + normal_boot_size);
+				break;
+			}
+		}
 	}
+
+	imgif->tpheader.data = tp_header;
+	imgif->tpheader.magic_header = tp_header->magic_header;
 
 	imgif->tpheader.part_count = htons(tp_header->part_count);
 
