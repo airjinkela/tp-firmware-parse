@@ -1,6 +1,7 @@
 #pragma author StarField Xu
+#pragma description Tplink Router upgrade firmware
+#pragma magic [55 AA 4C 5E 83 1F 53 4B A1 F8 F7 C9 18 DF 8F BF 7D A1 AA 55] @ 0x04
 #pragma endian big
-#pragma magic [0x55 0xAA 0x4C 0x5E 0x83 0x1F 0x53 0x4B 0xA1 0xF8 0xF7 0xC9 0x18 0xDF 0x8F 0xBF 0x7D 0xA1 0xAA 0x55] @ 0x04
 
 // Image Header Magic (20 bytes)
 #define HEADER_MAGIC    "\x55\xAA\x4C\x5E\x83\x1F\x53\x4B\xA1\xF8\xF7\xC9\x18\xDF\x8F\xBF\x7D\xA1\xAA\x55"
