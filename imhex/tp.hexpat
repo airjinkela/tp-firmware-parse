@@ -1,65 +1,41 @@
-// This is AI generated Code
-// It's looks worse.....
-// I think I need to rewrite this.....
-
-
-// TP-Link Firmware Image Pattern for ImHex
-// Based on reverse-engineered firmware format from tp-firmware-parse
-//
-// Image Layout:
-//   [0x00] HeaderData          - Main image header (variable size, up to header_size)
-//   [variable] FacBoot         - Factory boot partition (optional, 0x100000 bytes)
-//   [variable] NormalBoot      - Normal boot partition (optional, 0xA0000 or 0x40000 bytes)
-//   [variable] TpHeaderData    - Partition table header
-//   [variable] Kernel + Rootfs - Remaining partitions (described by TpHeaderData)
-
+#pragma author StarField Xu
 #pragma endian big
-
-// =============================================================================
-// Constants
-// =============================================================================
+#pragma magic [0x55 0xAA 0x4C 0x5E 0x83 0x1F 0x53 0x4B 0xA1 0xF8 0xF7 0xC9 0x18 0xDF 0x8F 0xBF 0x7D 0xA1 0xAA 0x55] @ 0x04
 
 // Image Header Magic (20 bytes)
-//   55 AA 4C 5E 83 1F 53 4B A1 F8 F7 C9 18 DF 8F BF 7D A1 AA 55
-#define HEADER_MAGIC_BYTE2 0x4C
-#define HEADER_MAGIC_BYTE3 0x5E
-
+#define HEADER_MAGIC    "\x55\xAA\x4C\x5E\x83\x1F\x53\x4B\xA1\xF8\xF7\xC9\x18\xDF\x8F\xBF\x7D\xA1\xAA\x55"
 // TP Header Magic (20 bytes)
-//   55 AA 9D D1 A8 C8 83 31 C9 69 FB BF BC F0 D4 32 70 C7 AA 55
-#define TPHEADER_MAGIC_BYTE2 0x9D
-#define TPHEADER_MAGIC_BYTE3 0xD1
+#define TPHEADER_MAGIC  "\x55\xAA\x9D\xD1\xA8\xC8\x83\x31\xC9\x69\xFB\xBF\xBC\xF0\xD4\x32\x70\xC7\xAA\x55"
 
 // Partition size constants
 #define PART_SIZE_FACBOOT      0x00100000
 #define NORMAL_BOOT_SIZE_A     0x000A0000
 #define NORMAL_BOOT_SIZE_B     0x00040000
 
-// ContentType bit positions
 #define CONTENT_HAS_NORMAL_BOOT  0
 #define CONTENT_HAS_ROOTFS       1
 #define CONTENT_HAS_FACBOOT      4
 
-// =============================================================================
-// Type Definitions
-// =============================================================================
-
 import std.io;
 import std.mem;
+import std.sys;
 
-/// Hardware/Firmware ID (16 bytes)
 struct ID {
     u8 id[16];
 };
 
-/// Partition entry: absolute offset and size
 struct PartInfoData {
     u32 offset;
     u32 size;
 };
 
-// =============================================================================
-// Main Image Header
-// =============================================================================
+bitfield ContentType {
+    unknown1 : 11;
+    have_facboot : 1;
+    unknown : 2;
+    have_kernel_romfs : 1;
+    have_normal_boot : 1;
+};
 
 struct HeaderData {
     u16 resv[2];
@@ -67,22 +43,19 @@ struct HeaderData {
     u16 header_size;
     u16 vender_id;
     u16 unknown0;
-    u16 content_type;
+    ContentType content_type;
     u8 image_rsa_sign[128];
     u16 hwid_count;
     u16 fwid_count;
     u16 fwid_map;
     u8 unknown1[10];
 
-    // HWID entries (each 16 bytes, only if count > 0)
     if (hwid_count > 0)
         ID hwid[hwid_count] [[color("376AD0")]];
 
-    // FWID entries (each 16 bytes, only if count > 0)
     if (fwid_count > 0)
         ID fwid[fwid_count] [[color("17BECF")]];
 
-    // Padding to fill up to header_size (relative to start of resv)
     u8 pad[header_size - ($ - addressof(resv))];
 };
 
@@ -112,45 +85,60 @@ struct TpHeaderData {
     char product_name[14];
     u16 support_fwid_count;
 
-    // Supported FWID entries (each 16 bytes, only if count > 0)
     if (support_fwid_count > 0)
         ID fwid[support_fwid_count] [[color("17BECF")]];
+
+    u8 pad[tp_header.size - ($ - addressof(resv))];
 };
 
-// =============================================================================
-// Main Parsing Logic
-// =============================================================================
+// ImageHeader
+HeaderData image_header @ 0x0;
 
-// ---- 1. Parse Image Header at offset 0x00 --------------------------------
-HeaderData hd @ 0x0;
+// calculate TpHeader offset
+u64 off = image_header.header_size;
 
-// ---- 2. Calculate content offset after header ----------------------------
-u64 off = hd.header_size;
-
-// ---- 3. FacBoot Partition (optional) ------------------------------------
-// Present when content_type bit 4 (0x10) is set
-if (hd.content_type & (1 << CONTENT_HAS_FACBOOT))
+if (image_header.content_type.have_facboot)
     off += PART_SIZE_FACBOOT;
 
-// ---- 4. NormalBoot & TP Header Detection --------------------------------
-// Normal boot size is dynamic (0xA0000 or 0x40000). We detect the correct
-// size by checking the TP Header magic third byte (0x9D) at each candidate.
-// The TP header is located at: off + normal_boot_size
-
 u64 tp_offset = off;    // default: assume no normal boot
+char tpmagic_byte_a[20] @ (off + NORMAL_BOOT_SIZE_A + 4) [[hidden]];
+char tpmagic_byte_b[20] @ (off + NORMAL_BOOT_SIZE_B + 4) [[hidden]];
 
-if (hd.content_type & (1 << CONTENT_HAS_NORMAL_BOOT)) {
-    // Read the third magic byte at each candidate to identify TP header
-    // TP header magic[2] = 0x9D, image header magic[2] = 0x4C
-    u8 magic_byte_at_a @ (off + NORMAL_BOOT_SIZE_A + 6);
+if (image_header.content_type.have_normal_boot) {
 
-std::print("magic_byte_at_a 0x{:08X}", magic_byte_at_a);
-
-    if (magic_byte_at_a == TPHEADER_MAGIC_BYTE2)
+    if (tpmagic_byte_a == TPHEADER_MAGIC)
         tp_offset = off + NORMAL_BOOT_SIZE_A;
-    else
+    else if (tpmagic_byte_b == TPHEADER_MAGIC)
         tp_offset = off + NORMAL_BOOT_SIZE_B;
+    else
+        std::assert(TPHEADER_MAGIC, "Invalid TPHeader value!");
 }
 
-// ---- 5. TP Header (Partition Table) --------------------------------------
-TpHeaderData tp @ tp_offset;
+u64 offset = image_header.header_size;
+struct Parts{
+    TpHeaderData tp_header_part @ tp_offset;
+
+    if (image_header.content_type.have_facboot)
+    {
+        u8 facboot_part[tp_header_part.facboot.size] @ offset;
+        offset += tp_header_part.facboot.size;
+    }
+
+    if (image_header.content_type.have_normal_boot)
+    {
+        u8 normal_boot_part[tp_header_part.NormalBoot.size] @ offset;
+        offset += tp_header_part.NormalBoot.size;
+    }
+
+    offset += tp_header_part.tp_header.size;
+
+    if (image_header.content_type.have_kernel_romfs)
+    {
+        u8 BootingKernel_part[tp_header_part.BootingKernel.size] @ offset;
+        offset += tp_header_part.BootingKernel.size;
+        u8 BootingKernel_part[tp_header_part.Rootfs.size] @ offset;
+        offset += tp_header_part.Rootfs.size;
+    }
+};
+
+Parts parts @ 0x0;
